@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.projects import router as projects_router
 from app.routes.chapters import router as chapters_router
+from app.routes.chat import router as chat_router
+from app.routes.conversations import router as conversations_router
+from app.routes.dashboard import router as dashboard_router
 
 from app.core.config import settings
 
@@ -37,7 +40,21 @@ app.include_router(
 )
 
 
-@app.get("/", tags=["Root"])
+
+app.include_router(
+    chat_router,
+    prefix=settings.API_PREFIX,
+)
+app.include_router(
+    conversations_router,
+    prefix=settings.API_PREFIX,
+)
+
+app.include_router(
+    dashboard_router,
+    prefix=settings.API_PREFIX,
+)
+@app.get("/", tags="Root")
 async def root():
     return {
         "message": "Welcome to StoryForge AI API",
@@ -52,3 +69,4 @@ async def health_check():
         "service": "storyforge-backend",
         "environment": settings.APP_ENV,
     }
+
