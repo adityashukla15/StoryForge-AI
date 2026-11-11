@@ -27,15 +27,7 @@ def index_chapter(
         raise ValueError("Chapter not found in the requested project.")
 
     content = chapter.get("content", "")
-
-    if not content or not content.strip():
-        raise ValueError("Chapter has no content to index.")
-
     chunks = chunk_text(content)
-
-    if not chunks:
-        raise ValueError("No valid text chunks were generated.")
-
     embeddings = generate_embeddings(chunks)
 
     stored_count = store_chapter_chunks(
@@ -46,9 +38,17 @@ def index_chapter(
         embeddings=embeddings,
     )
 
+    if not chunks and stored_count == 0:
+        return {
+            "chapter_id": str(chapter_id),
+            "total_chunks": 0,
+            "stored_chunks": 0,
+            "status": "not_applicable",
+        }
+
     return {
         "chapter_id": str(chapter_id),
         "total_chunks": len(chunks),
         "stored_chunks": stored_count,
-        "status": "indexed" if stored_count == len(chunks) else "incomplete",
+        "status": "indexed" if chunks and stored_count == len(chunks) else "incomplete",
     }

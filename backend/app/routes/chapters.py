@@ -1,16 +1,52 @@
+import logging
 from uuid import UUID
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import File, Form, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from app.core.security import get_current_user
 from app.models.chapter import ChapterCreate, ChapterUpdate
+from app.rag.indexer import index_chapter
 from app.services import chapter_service
-from uuid import uuid4
-from fastapi import File, Form, UploadFile
 from app.utils.file_parser import extract_text_from_upload
 
 
 router = APIRouter(tags=["Chapters"])
+logger = logging.getLogger(__name__)
+
+
+async def _index_saved_chapter(
+    chapter: dict,
+    user_id: str,
+    project_id: UUID,
+) -> dict:
+    try:
+        result = await run_in_threadpool(
+            index_chapter,
+            user_id,
+            project_id,
+            UUID(chapter["id"]),
+        )
+        indexing_status = result.get("status")
+        if indexing_status not in {"indexed", "not_applicable"}:
+            indexing_status = "failed"
+            logger.warning(
+                "Chapter indexing did not complete",
+                extra={"indexing_status": indexing_status},
+            )
+    except Exception as error:
+        indexing_status = "failed"
+        logger.warning(
+            "Chapter indexing failed",
+            extra={
+                "indexing_status": indexing_status,
+                "error_type": type(error).__name__,
+            },
+        )
+
+    return {**chapter, "indexing_status": indexing_status}
 
 
 @router.post(
@@ -30,10 +66,15 @@ async def create_new_chapter(
             detail="Project not found.",
         )
 
-    return chapter_service.create_chapter(
+    saved_chapter = chapter_service.create_chapter(
         current_user["id"],
         project_id,
         chapter.model_dump(),
+    )
+    return await _index_saved_chapter(
+        saved_chapter,
+        current_user["id"],
+        project_id,
     )
 
 
@@ -81,10 +122,11 @@ async def update_chapter_details(
     chapter: ChapterUpdate,
     current_user: dict = Depends(get_current_user),
 ):
+    update_data = chapter.model_dump(exclude_unset=True)
     updated_chapter = chapter_service.update_chapter(
         current_user["id"],
         chapter_id,
-        chapter.model_dump(exclude_unset=True),
+        update_data,
     )
 
     if not updated_chapter:
@@ -93,7 +135,14 @@ async def update_chapter_details(
             detail="Chapter not found.",
         )
 
-    return updated_chapter
+    if "content" not in update_data:
+        return updated_chapter
+
+    return await _index_saved_chapter(
+        updated_chapter,
+        current_user["id"],
+        UUID(updated_chapter["project_id"]),
+    )
 
 
 @router.delete("/chapters/{chapter_id}")
@@ -167,8 +216,6 @@ async def upload_new_chapter(
             payload,
         )
 
-        return chapter
-
     except Exception:
         # Roll back uploaded file if database insertion fails
         if uploaded_file_path:
@@ -181,3 +228,5 @@ async def upload_new_chapter(
             status_code=500,
             detail="Unable to upload chapter. Please try again.",
         )
+
+    return await _index_saved_chapter(chapter, user_id, project_id)

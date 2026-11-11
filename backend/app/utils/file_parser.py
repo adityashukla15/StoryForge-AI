@@ -6,6 +6,7 @@ from pypdf import PdfReader
 
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+UPLOAD_READ_SIZE = 64 * 1024
 
 ALLOWED_EXTENSIONS = {".pdf", ".txt"}
 
@@ -37,18 +38,26 @@ async def extract_text_from_upload(file: UploadFile) -> tuple[bytes, str, str]:
             detail="Invalid TXT content type.",
         )
 
-    file_bytes = await file.read()
+    file_buffer = bytearray()
+    while len(file_buffer) <= MAX_FILE_SIZE:
+        remaining_with_overflow = MAX_FILE_SIZE + 1 - len(file_buffer)
+        read_size = min(UPLOAD_READ_SIZE, remaining_with_overflow)
+        chunk = await file.read(read_size)
+        if not chunk:
+            break
+        file_buffer.extend(chunk)
+        if len(file_buffer) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="File size cannot exceed 10 MB.",
+            )
+
+    file_bytes = bytes(file_buffer)
 
     if not file_bytes:
         raise HTTPException(
             status_code=400,
             detail="Uploaded file is empty.",
-        )
-
-    if len(file_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="File size cannot exceed 10 MB.",
         )
 
     if extension == ".pdf":

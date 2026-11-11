@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "rewrites": [
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/characters", "destination": "/index.html" },
+    { "source": "/world", "destination": "/index.html" },
+    { "source": "/memory", "destination": "/index.html" },
+    { "source": "/continuity", "destination": "/index.html" },
+    { "source": "/editor", "destination": "/index.html" },
+    { "source": "/assistant", "destination": "/index.html" },
+    { "source": "/relationships", "destination": "/index.html" }
+  ]
+}

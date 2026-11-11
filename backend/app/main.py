@@ -1,4 +1,6 @@
-﻿from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.projects import router as projects_router
@@ -7,21 +9,28 @@ from app.routes.chat import router as chat_router
 from app.routes.conversations import router as conversations_router
 from app.routes.dashboard import router as dashboard_router
 
-from app.core.config import settings
+from app.core.config import settings, validate_production_settings
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    validate_production_settings(settings)
+    yield
 
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="Backend API for StoryForge AI storytelling platform.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 
@@ -69,4 +78,3 @@ async def health_check():
         "service": "storyforge-backend",
         "environment": settings.APP_ENV,
     }
-

@@ -37,6 +37,7 @@ export type Chapter = {
   user_id: string;
   title: string;
   content: string;
+  indexing_status?: 'pending' | 'indexed' | 'failed' | 'not_applicable';
   chapter_number?: number | null;
   created_at?: string;
   updated_at?: string;

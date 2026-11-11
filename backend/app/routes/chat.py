@@ -1,4 +1,5 @@
-﻿from uuid import UUID
+import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -14,6 +15,7 @@ from app.services.chat_service import generate_grounded_answer
 
 
 router = APIRouter(tags=["Chat"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/projects/{project_id}/chat")
@@ -23,30 +25,24 @@ def chat_with_project(
     current_user: dict = Depends(get_current_user),
 ):
     user_id = current_user["id"]
-
-    # Verify project ownership.
-    project = project_service.get_project(user_id, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found.",
-        )
-
+    failure_stage = "project_lookup"
     try:
-        # Create a new conversation or verify an existing one.
-        if request.conversation_id is None:
-            conversation = conversation_service.create_conversation(
-                user_id=user_id,
-                project_id=project_id,
-            )
-            conversation_id = UUID(conversation["id"])
+        # Verify project ownership.
+        project = project_service.get_project(user_id, project_id)
 
-        else:
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+        failure_stage = "conversation_validation"
+        conversation_id = request.conversation_id
+        if conversation_id is not None:
             conversation = conversation_service.get_conversation(
                 user_id=user_id,
                 project_id=project_id,
-                conversation_id=request.conversation_id,
+                conversation_id=conversation_id,
             )
 
             if not conversation:
@@ -55,17 +51,8 @@ def chat_with_project(
                     detail="Conversation not found.",
                 )
 
-            conversation_id = request.conversation_id
-
-        # Persist the user's question.
-        message_service.create_message(
-            user_id=user_id,
-            conversation_id=conversation_id,
-            role="user",
-            content=request.question,
-        )
-
         # Retrieve relevant chapter chunks.
+        failure_stage = "retrieval"
         retrieved_chunks = search_project_chunks(
             user_id=user_id,
             project_id=project_id,
@@ -74,9 +61,26 @@ def chat_with_project(
         )
 
         # Generate a grounded answer.
+        failure_stage = "generation"
         result = generate_grounded_answer(
             question=request.question,
             retrieved_chunks=retrieved_chunks,
+        )
+
+        # Do not persist partial turns when retrieval or generation fails.
+        failure_stage = "persistence"
+        if conversation_id is None:
+            conversation = conversation_service.create_conversation(
+                user_id=user_id,
+                project_id=project_id,
+            )
+            conversation_id = UUID(conversation["id"])
+
+        message_service.create_message(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            role="user",
+            content=request.question,
         )
 
         # Persist the assistant response and its source references.
@@ -101,7 +105,14 @@ def chat_with_project(
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as error:
+        logger.error(
+            "Chat request failed",
+            extra={
+                "failure_stage": failure_stage,
+                "error_type": type(error).__name__,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="StoryForge AI is temporarily unavailable. Please try again.",

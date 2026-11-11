@@ -99,6 +99,7 @@ export async function chatWithProject(projectId: string, question: string, conve
       question,
       ...(conversationId ? { conversation_id: conversationId } : {}),
     }),
+    signal: AbortSignal.timeout(120_000),
   });
 }
 

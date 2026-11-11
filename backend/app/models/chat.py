@@ -1,6 +1,6 @@
 ﻿from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatRequest(BaseModel):
@@ -15,3 +15,8 @@ class ChatRequest(BaseModel):
         default=None,
         description="Existing conversation ID. Leave empty to start a new conversation.",
     )
+
+    @field_validator("question", mode="before")
+    @classmethod
+    def strip_question(cls, value):
+        return value.strip() if isinstance(value, str) else value

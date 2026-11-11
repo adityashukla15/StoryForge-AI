@@ -6,12 +6,18 @@ from google.genai import types
 from app.core.config import settings
 
 
+GEMINI_REQUEST_TIMEOUT_MS = 60_000
+
+
 @lru_cache(maxsize=1)
 def get_gemini_client():
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+    return genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options=types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
+    )
 
 
 def generate_embeddings(

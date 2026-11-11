@@ -20,6 +20,19 @@ function chapterSignature(chapter: Pick<Chapter, 'title' | 'content' | 'chapter_
   return JSON.stringify([chapter.title, chapter.content, chapter.chapter_number ?? null]);
 }
 
+function indexingMessage(action: string, chapter: Chapter) {
+  switch (chapter.indexing_status) {
+    case 'indexed':
+      return `${action} and indexed.`;
+    case 'failed':
+      return `${action}, but indexing failed. The chapter is saved but may not be searchable by Story AI.`;
+    case 'not_applicable':
+      return `${action}. There was no text to index.`;
+    default:
+      return `${action}. Indexing status was not confirmed.`;
+  }
+}
+
 export function ChapterEditor({ projectId, projectTitle, onDirtyChange }: ChapterEditorProps) {
   const [chapterId, setChapterId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -246,7 +259,7 @@ export function ChapterEditor({ projectId, projectTitle, onDirtyChange }: Chapte
       setChapterNumber(uploaded.chapter_number?.toString() ?? '');
       setSavedSignature(chapterSignature(uploaded));
       setConfirmedSave(true);
-      setSuccessMessage('Chapter uploaded and saved. Indexing was not triggered or confirmed.');
+      setSuccessMessage(indexingMessage('Chapter uploaded and saved', uploaded));
       setUploadFile(null);
       setUploadTitle('');
       setUploadChapterNumber('');
@@ -300,7 +313,7 @@ export function ChapterEditor({ projectId, projectTitle, onDirtyChange }: Chapte
         setChapterNumber(created.chapter_number?.toString() ?? '');
         setSavedSignature(chapterSignature(created));
         setConfirmedSave(true);
-        setSuccessMessage('Chapter created and saved.');
+        setSuccessMessage(indexingMessage('Chapter created and saved', created));
       } else if (chapterId && chapterQuery.data) {
         const input: UpdateChapterInput = {};
         if (title.trim() !== chapterQuery.data.title) input.title = title.trim();
@@ -318,7 +331,9 @@ export function ChapterEditor({ projectId, projectTitle, onDirtyChange }: Chapte
         setChapterNumber(updated.chapter_number?.toString() ?? '');
         setSavedSignature(chapterSignature(updated));
         setConfirmedSave(true);
-        setSuccessMessage('Changes saved.');
+        setSuccessMessage(updated.indexing_status
+          ? indexingMessage('Changes saved', updated)
+          : 'Changes saved.');
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to save this chapter.');
