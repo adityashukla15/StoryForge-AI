@@ -3,7 +3,7 @@ import { Eye, EyeOff, Feather, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { useAuth } from '../lib/auth/AuthProvider';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { status, message } = useAuth();
+  const { status, message, messageType } = useAuth();
 
   if (status === 'loading' || status === 'verifying') {
     return (
@@ -20,14 +20,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return children;
   }
 
-  return <SignInScreen message={message} configurationMissing={status === 'needs-config'} />;
+  return (
+    <SignInScreen
+      message={message}
+      messageType={messageType}
+      configurationMissing={status === 'needs-config'}
+    />
+  );
 }
 
 function SignInScreen({
   message,
+  messageType,
   configurationMissing,
 }: {
   message: string | null;
+  messageType: 'error' | 'success' | null;
   configurationMissing: boolean;
 }) {
   const { signIn, signUp } = useAuth();
@@ -119,7 +127,12 @@ function SignInScreen({
                 : 'Create an account to begin building your library.'}
             </p>
             {(error || (mode === 'sign-in' ? message : null)) && (
-              <p className="form-message error" role="alert">{error ?? message}</p>
+              <p
+                className={`form-message ${error || messageType !== 'success' ? 'error' : 'success'}`}
+                role={error || messageType !== 'success' ? 'alert' : 'status'}
+              >
+                {error ?? message}
+              </p>
             )}
             <form className="auth-form" onSubmit={mode === 'sign-in' ? handleSignIn : handleSignUp}>
               {mode === 'sign-up' && (

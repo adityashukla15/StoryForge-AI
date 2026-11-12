@@ -70,6 +70,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: clip;
   background: transparent;
   color: var(--foreground);
 }
@@ -80,6 +81,11 @@ button, input, textarea, select {
 
 button {
   cursor: pointer;
+  max-width: 100%;
+}
+
+input, textarea, select {
+  max-width: 100%;
 }
 
 button:disabled,
@@ -96,6 +102,8 @@ textarea:disabled {
 
 #root {
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 ::selection {
@@ -290,6 +298,130 @@ textarea:disabled {
 .user-chip span {
   font-size: 0.66rem;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-menu-container {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(240px, calc(100vw - 2rem));
+  min-height: 40px;
+  padding: 5px 9px;
+  color: var(--foreground);
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.profile-trigger:hover {
+  color: var(--antique);
+  border-color: rgba(163, 127, 255, 0.25);
+  background: rgba(102, 83, 164, 0.18);
+}
+
+.profile-trigger:active {
+  background: rgba(102, 83, 164, 0.3);
+}
+
+.profile-avatar {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(191, 162, 101, 0.5);
+  border-radius: 50%;
+  color: var(--antique);
+  background: rgba(102, 83, 164, 0.28);
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.profile-trigger-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 8px;
+  border: 1px solid rgba(163, 127, 255, 0.28);
+  border-radius: 0.5rem;
+  background: rgba(35, 22, 48, 0.98);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px);
+}
+
+.profile-dropdown-identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 11px 12px;
+  border-bottom: 1px solid rgba(163, 127, 255, 0.18);
+}
+
+.profile-dropdown-name,
+.profile-dropdown-email {
+  overflow-wrap: anywhere;
+}
+
+.profile-dropdown-name {
+  color: var(--foreground);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.profile-dropdown-email {
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+}
+
+.profile-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  color: var(--foreground);
+  border: 1px solid transparent;
+  border-radius: 0.3rem;
+  background: transparent;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.profile-logout-button:hover:not(:disabled) {
+  color: var(--antique);
+  border-color: rgba(163, 127, 255, 0.2);
+  background: rgba(102, 83, 164, 0.22);
+}
+
+.profile-logout-button:active:not(:disabled) {
+  background: rgba(102, 83, 164, 0.34);
+}
+
+.profile-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.profile-trigger:focus-visible,
+.profile-logout-button:focus-visible {
+  outline-offset: 2px;
 }
 
 .sidebar-action,
@@ -1574,8 +1706,8 @@ textarea:disabled {
   position: absolute;
   right: 7px;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   color: var(--muted-foreground);
   border: 0;
@@ -1676,12 +1808,15 @@ textarea:disabled {
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(10, 7, 14, 0.76);
 }
 
 .project-dialog {
   width: min(100%, 560px);
   max-height: min(90vh, 760px);
+  max-height: min(90dvh, 760px);
   overflow: auto;
   padding: clamp(20px, 4vw, 30px);
   border-radius: 0.5rem;
@@ -1773,6 +1908,41 @@ textarea:disabled {
 }
 
 @media (max-width: 640px) {
+  .studio-topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .studio-header-left,
+  .studio-header-actions {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .studio-header-left {
+    gap: 10px;
+  }
+
+  .studio-header-left > label {
+    flex: 1 1 auto;
+  }
+
+  .studio-header-left select {
+    max-width: clamp(80px, 35vw, 180px);
+  }
+
+  .studio-header-actions {
+    justify-content: flex-end;
+  }
+
+  .studio-header-actions > button {
+    min-height: 44px;
+  }
+
+  .profile-trigger {
+    min-height: 44px;
+  }
+
   .topbar {
     padding-left: 14px;
     padding-right: 14px;
@@ -1837,6 +2007,82 @@ textarea:disabled {
 
   .message-card {
     max-width: 100%;
+  }
+
+  .chapter-editor-footer {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions > * {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .studio-nav-link,
+  .studio-mobile-nav a,
+  .chapter-list-item,
+  .assistant-history-item,
+  .assistant-suggestion {
+    min-height: 44px;
+  }
+
+  .project-dialog .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-scene > header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .landing-scene > header > a:last-child {
+    margin-left: auto;
+    max-width: 100%;
+  }
+
+  .studio-header-left {
+    gap: 8px;
+  }
+
+  .studio-header-left select {
+    max-width: clamp(72px, 30vw, 135px);
+  }
+
+  .studio-header-actions {
+    gap: 8px;
+  }
+
+  .profile-trigger {
+    gap: 5px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .profile-trigger-name {
+    max-width: 110px;
+  }
+
+  .dialog-backdrop {
+    padding: 12px;
+  }
+
+  .chapter-toolbar-actions {
+    width: 100%;
+  }
+
+  .chapter-toolbar-actions > button {
+    min-height: 44px;
   }
 }
 

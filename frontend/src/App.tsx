@@ -58,6 +58,14 @@ function writeStoredValue(key: string, value: unknown) {
   }
 }
 
+function removeStoredValue(key: string) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (error) {
+    console.warn(`Unable to clear StoryForge selection from local storage (${key}).`, error);
+  }
+}
+
 function NotFound() {
   return (
     <main className="grid min-h-screen place-items-center px-6 text-center">
@@ -209,9 +217,13 @@ function AuthenticatedStudio({ view }: { view: StudioView }) {
     setNotice(null);
     try {
       await signOut();
+      removeStoredValue(projectStorageKey);
+      removeStoredValue(conversationStorageKey);
+      return true;
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to sign out.");
       setNoticeIsError(true);
+      return false;
     }
   }
 
@@ -238,6 +250,7 @@ function AuthenticatedStudio({ view }: { view: StudioView }) {
   }
 
   const contextValue: StudioContextValue = {
+    userName: user?.name ?? null,
     userEmail: user?.email ?? null,
     projects,
     selectedProjectId,
@@ -259,7 +272,7 @@ function AuthenticatedStudio({ view }: { view: StudioView }) {
     closeProjectEditor,
     submitProject,
     deleteProject: (project) => { void confirmAndDeleteProject(project); },
-    signOut: () => { void handleSignOut(); },
+    signOut: handleSignOut,
     openConversation,
     startNewConversation,
     conversationIdForProject: (projectId) => conversationIds[projectId] ?? null,

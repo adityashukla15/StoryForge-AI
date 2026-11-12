@@ -1,4 +1,4 @@
-import { useState, type AnchorHTMLAttributes, type HTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type AnchorHTMLAttributes, type HTMLAttributes, type ReactNode } from "react";
 import {
   ArrowDownRight,
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
   GitBranch,
   Globe2,
   Lightbulb,
+  LogOut,
   Menu,
   MessageCircle,
   Plus,
@@ -158,9 +159,15 @@ function Footer() {
 
 function StudioLayout({ view, children }: { view: View; children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [signOutPending, setSignOutPending] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const signOutPendingRef = useRef(false);
   const current = pageCopy[view];
   const groups = [...new Set(navItems.map((item) => item.group))];
   const {
+    userName,
     userEmail,
     projects,
     selectedProjectId,
@@ -181,24 +188,102 @@ function StudioLayout({ view, children }: { view: View; children: ReactNode }) {
     submitProject,
   } = useStudioContext();
   const previewOnly = ["characters", "world", "memory", "continuity", "relationships"].includes(view);
-  const initials = userEmail?.slice(0, 2).toLocaleUpperCase() ?? "SF";
+  const initials = (userName?.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)
+    || userEmail?.slice(0, 2)
+    || "SF").toLocaleUpperCase();
+
+  useEffect(() => {
+    if (!profileMenuOpen) {
+      return;
+    }
+
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+        profileButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [profileMenuOpen]);
+
+  async function handleProfileSignOut() {
+    if (signOutPendingRef.current || !window.confirm("Are you sure you want to sign out?")) {
+      return;
+    }
+
+    signOutPendingRef.current = true;
+    setSignOutPending(true);
+    setProfileMenuOpen(false);
+    try {
+      await signOut();
+    } finally {
+      signOutPendingRef.current = false;
+      setSignOutPending(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between border-b border-foreground/10 bg-ink/90 px-4 backdrop-blur-xl md:px-7">
-        <div className="flex min-w-0 items-center gap-3 md:gap-5"><Brand /><span className="hidden h-5 w-px bg-foreground/15 sm:block" /><label className="flex min-w-0 items-center gap-2 text-xs text-foreground/55"><BookOpen size={13} className="shrink-0 text-antique" /><select aria-label="Select project" disabled={projectsLoading || Boolean(projectsError)} className="max-w-[145px] truncate bg-transparent text-foreground/75 outline-none sm:max-w-[220px]" value={selectedProjectId ?? ""} onChange={(event) => selectProject(event.target.value || null)}><option value="" className="bg-ink">{projectsLoading ? "Loading projects…" : projectsError ? "Project list unavailable" : projects.length ? "Choose project" : "No projects yet"}</option>{projects.map((project) => <option className="bg-ink" key={project.id} value={project.id}>{project.title}</option>)}</select><ChevronDown size={12} /></label></div>
-        <div className="flex shrink-0 items-center gap-2 md:gap-3"><Button aria-label="Search is not available yet" title="Search is not available yet" disabled variant="ghost" size="icon" className="hidden text-foreground/70 hover:text-antique sm:inline-flex"><Search /></Button><Button aria-label="Help is not available yet" title="Help is not available yet" disabled variant="ghost" size="icon" className="hidden text-foreground/70 hover:text-antique sm:inline-flex"><CircleHelp /></Button><span className="hidden h-6 w-px bg-foreground/15 sm:block" /><Button variant="outline" className="h-9 border-antique/35 bg-transparent px-3 text-xs text-foreground hover:bg-royal/50 hover:text-foreground" onClick={openCreateProject}><Plus size={14} /> New story</Button><Button variant="ghost" className="inline-flex h-9 px-2 text-xs text-foreground/65" onClick={signOut} aria-label={`Sign out ${userEmail ?? ""}`}><span className="grid size-6 place-items-center rounded-full border border-antique/40 text-[9px] text-antique">{initials}</span><span className="hidden max-w-[130px] truncate lg:inline">{userEmail}</span></Button></div>
+      <header className="studio-topbar sticky top-0 z-40 flex min-h-[68px] items-center justify-between gap-3 border-b border-foreground/10 bg-ink/90 px-4 py-2 backdrop-blur-xl md:px-7">
+        <div className="studio-header-left flex min-w-0 items-center gap-3 md:gap-5"><Brand /><span className="hidden h-5 w-px bg-foreground/15 sm:block" /><label className="flex min-w-0 items-center gap-2 text-xs text-foreground/55"><BookOpen size={13} className="shrink-0 text-antique" /><select aria-label="Select project" disabled={projectsLoading || Boolean(projectsError)} className="max-w-[145px] truncate bg-transparent text-foreground/75 outline-none sm:max-w-[220px]" value={selectedProjectId ?? ""} onChange={(event) => selectProject(event.target.value || null)}><option value="" className="bg-ink">{projectsLoading ? "Loading projects…" : projectsError ? "Project list unavailable" : projects.length ? "Choose project" : "No projects yet"}</option>{projects.map((project) => <option className="bg-ink" key={project.id} value={project.id}>{project.title}</option>)}</select><ChevronDown size={12} /></label></div>
+        <div className="studio-header-actions flex shrink-0 items-center gap-2 md:gap-3"><Button aria-label="Search is not available yet" title="Search is not available yet" disabled variant="ghost" size="icon" className="hidden text-foreground/70 hover:text-antique md:inline-flex"><Search /></Button><Button aria-label="Help is not available yet" title="Help is not available yet" disabled variant="ghost" size="icon" className="hidden text-foreground/70 hover:text-antique md:inline-flex"><CircleHelp /></Button><span className="hidden h-6 w-px bg-foreground/15 md:block" /><Button variant="outline" className="h-9 border-antique/35 bg-transparent px-3 text-xs text-foreground hover:bg-royal/50 hover:text-foreground" onClick={openCreateProject}><Plus size={14} /> New story</Button><div className="profile-menu-container" ref={profileMenuRef}>
+            <button
+              ref={profileButtonRef}
+              type="button"
+              className="profile-trigger"
+              aria-label={`Open profile menu for ${userName ?? userEmail ?? "your account"}`}
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              aria-controls="profile-menu"
+              onClick={() => setProfileMenuOpen((open) => !open)}
+            >
+              <span className="profile-avatar" aria-hidden="true">{initials}</span>
+              <span className="profile-trigger-name">{userName ?? userEmail ?? "Profile"}</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            {profileMenuOpen && (
+              <div id="profile-menu" className="profile-dropdown" role="menu" aria-label="Profile options">
+                <div className="profile-dropdown-identity">
+                  <span className="profile-dropdown-name">{userName ?? userEmail ?? "Your account"}</span>
+                  {userEmail && <span className="profile-dropdown-email">{userEmail}</span>}
+                </div>
+                <button
+                  type="button"
+                  className="profile-logout-button"
+                  role="menuitem"
+                  disabled={signOutPending}
+                  onClick={() => void handleProfileSignOut()}
+                >
+                  <LogOut size={15} aria-hidden="true" />
+                  {signOutPending ? "Signing out…" : "Logout"}
+                </button>
+              </div>
+            )}
+          </div></div>
       </header>
       <div className="mx-auto flex max-w-[1600px]">
         <aside className="sticky top-[68px] hidden h-[calc(100svh-68px)] w-[232px] shrink-0 flex-col border-r border-foreground/10 px-4 pb-5 pt-7 lg:flex">
           <div className="mb-5 px-3 font-tech text-[9px] uppercase tracking-[0.2em] text-foreground/35">Your creative room</div>
           {groups.map((group) => <div key={group} className="mb-5"><p className="mb-2 px-3 font-tech text-[9px] uppercase tracking-[0.17em] text-antique/75">{group}</p><div className="space-y-1">{navItems.filter((item) => item.group === group).map(({ to, label, icon: Icon }) => { const active = to === `/${view}`; return <Link key={to} to={to} data-status={active ? "active" : "inactive"} aria-current={active ? "page" : undefined} className="studio-nav-link flex min-h-10 items-center gap-3 border-l-2 border-transparent px-3 text-[12px] text-foreground/60 transition-all hover:bg-royal/40 hover:text-foreground"><Icon size={15} strokeWidth={1.7} /><span>{label}</span></Link>; })}</div></div>)}
-          <div className="mt-auto border-t border-foreground/10 pt-4"><div className="flex items-center gap-3 px-3"><div className="grid size-8 place-items-center rounded-full border border-antique/50 bg-royal text-xs font-medium text-antique">{initials}</div><div className="min-w-0"><p className="truncate text-xs text-foreground/85">{userEmail ?? "Your library"}</p><p className="text-[10px] text-foreground/40">Authenticated account</p></div><Settings2 size={15} className="ml-auto text-foreground/40" /></div><Button variant="ghost" className="mt-2 h-8 w-full justify-start px-3 text-xs text-foreground/50 hover:text-antique sm:hidden" onClick={signOut}>Sign out</Button></div>
+          <div className="mt-auto border-t border-foreground/10 pt-4"><div className="flex items-center gap-3 px-3"><div className="grid size-8 place-items-center rounded-full border border-antique/50 bg-royal text-xs font-medium text-antique">{initials}</div><div className="min-w-0"><p className="truncate text-xs text-foreground/85">{userName ?? userEmail ?? "Your library"}</p><p className="text-[10px] text-foreground/40">Authenticated account</p></div><Settings2 size={15} className="ml-auto text-foreground/40" /></div></div>
         </aside>
         <main className="min-w-0 flex-1">
           <div className="border-b border-foreground/10 px-5 pt-6 md:px-9 md:pt-8">
             <div className="flex items-center gap-2 text-[10px] text-foreground/40"><Link to="/dashboard" className="hover:text-antique">{selectedProject?.title ?? "Your library"}</Link><ChevronRight size={11} /><span className="text-antique">{current.crumb}</span></div>
-            <div className="mt-5 flex items-end justify-between gap-4 pb-5"><div><p className="flex items-center gap-2 font-tech text-[9px] uppercase tracking-[0.19em] text-antique"><current.icon size={13} /> StoryForge AI <span className="text-foreground/25">/</span> {current.crumb}</p><h1 className="mt-2 max-w-[820px] font-display text-3xl leading-tight text-foreground md:text-4xl">{current.title}</h1><p className="mt-2 text-sm text-foreground/55">{current.subtitle}</p></div><Button variant="ghost" size="icon" aria-label="Toggle navigation" className="text-foreground/65 lg:hidden" onClick={() => setMobileNavOpen(!mobileNavOpen)}>{mobileNavOpen ? <X /> : <Menu />}</Button></div>
-            {mobileNavOpen && <nav className="-mx-5 flex gap-1 overflow-x-auto border-t border-foreground/10 px-4 py-2 lg:hidden">{navItems.map(({ to, label, icon: Icon }) => { const active = to === `/${view}`; return <Link key={to} to={to} data-status={active ? "active" : "inactive"} aria-current={active ? "page" : undefined} onClick={() => setMobileNavOpen(false)} className="flex shrink-0 items-center gap-2 px-3 py-2 text-[11px] text-foreground/65 hover:bg-royal/50 hover:text-foreground"><Icon size={14} />{label}</Link>; })}</nav>}
+            <div className="mt-5 flex items-end justify-between gap-4 pb-5"><div className="min-w-0"><p className="flex flex-wrap items-center gap-2 font-tech text-[9px] uppercase tracking-[0.19em] text-antique"><current.icon size={13} /> StoryForge AI <span className="text-foreground/25">/</span> {current.crumb}</p><h1 className="mt-2 max-w-[820px] font-display text-3xl leading-tight text-foreground md:text-4xl">{current.title}</h1><p className="mt-2 text-sm text-foreground/55">{current.subtitle}</p></div><Button variant="ghost" size="icon" aria-label="Toggle navigation" className="min-h-11 min-w-11 shrink-0 text-foreground/65 lg:hidden" onClick={() => setMobileNavOpen(!mobileNavOpen)}>{mobileNavOpen ? <X /> : <Menu />}</Button></div>
+            {mobileNavOpen && <nav className="studio-mobile-nav -mx-5 flex gap-1 overflow-x-auto border-t border-foreground/10 px-4 py-2 lg:hidden">{navItems.map(({ to, label, icon: Icon }) => { const active = to === `/${view}`; return <Link key={to} to={to} data-status={active ? "active" : "inactive"} aria-current={active ? "page" : undefined} onClick={() => setMobileNavOpen(false)} className="flex shrink-0 items-center gap-2 px-3 py-2 text-[11px] text-foreground/65 hover:bg-royal/50 hover:text-foreground"><Icon size={14} />{label}</Link>; })}</nav>}
           </div>
           <div className="px-5 py-6 md:px-9 md:py-8">
             {notice && <p className={`mb-5 border px-4 py-3 text-sm ${noticeIsError ? "border-destructive/40 bg-destructive/10 text-foreground" : "border-antique/25 bg-antique/5 text-antique"}`} role={noticeIsError ? "alert" : "status"}>{notice}</p>}

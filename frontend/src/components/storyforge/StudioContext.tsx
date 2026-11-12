@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { Project } from "../../types/api";
 
 export type StudioContextValue = {
+  userName: string | null;
   userEmail: string | null;
   projects: Project[];
   selectedProjectId: string | null;
@@ -23,7 +24,7 @@ export type StudioContextValue = {
   closeProjectEditor: () => void;
   submitProject: (input: { title?: string; description?: string | null; genre?: string | null }) => Promise<void>;
   deleteProject: (project: Project) => void;
-  signOut: () => void;
+  signOut: () => Promise<boolean>;
   openConversation: (projectId: string, conversationId: string) => void;
   startNewConversation: (projectId: string) => void;
   conversationIdForProject: (projectId: string) => string | null;

@@ -24,12 +24,14 @@ type AuthStatus =
 type AuthUser = {
   id: string;
   email: string | null;
+  name: string | null;
 };
 
 type AuthContextValue = {
   status: AuthStatus;
   user: AuthUser | null;
   message: string | null;
+  messageType: 'error' | 'success' | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (fullName: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'needs-config');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<'error' | 'success' | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const verificationRef = useRef<{ token: string; promise: Promise<boolean> } | null>(null);
@@ -54,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setStatus('verifying');
     setMessage(null);
+    setMessageType(null);
 
     const promise = (async () => {
       try {
@@ -61,7 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (verificationRef.current?.token !== token) {
           return false;
         }
-        setUser(response.user);
+        const fullName = nextSession.user.user_metadata?.full_name;
+        setUser({
+          ...response.user,
+          name: typeof fullName === 'string' && fullName.trim() ? fullName.trim() : null,
+        });
         setStatus('authenticated');
         return true;
       } catch (error) {
@@ -75,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setStatus('unauthenticated');
           setMessage('Your session is no longer authorized. Please sign in again.');
+          setMessageType('error');
           queryClient.clear();
           void supabase?.auth.signOut();
           return false;
@@ -86,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Unable to verify your session.');
+        setMessageType('error');
         return false;
       }
     })();
@@ -106,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus('unauthenticated');
         setMessage('Your session is no longer authorized. Please sign in again.');
+        setMessageType('error');
         verificationRef.current = null;
         void client.auth.signOut();
       }
@@ -140,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           setStatus('error');
           setMessage(error.message);
+          setMessageType('error');
           return;
         }
         setSession(data.session);
@@ -156,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (active) {
           setStatus('error');
           setMessage(error instanceof Error ? error.message : 'Unable to restore your Supabase session.');
+          setMessageType('error');
         }
       });
 
@@ -172,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setMessage(null);
+    setMessageType(null);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       throw error;
@@ -190,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setMessage(null);
+    setMessageType(null);
     const safeFullName = fullName
       .replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
       .trim()
@@ -228,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
       throw error;
     }
@@ -238,7 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verificationRef.current = null;
     queryClient.clear();
     setUser(null);
-    setMessage(null);
+    setMessage('You have been signed out.');
+    setMessageType('success');
     setStatus('unauthenticated');
   }, [queryClient]);
 
@@ -246,10 +262,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status,
     user,
     message,
+    messageType,
     signIn,
     signUp,
     signOut,
-  }), [status, user, message, signIn, signUp, signOut]);
+  }), [status, user, message, messageType, signIn, signUp, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

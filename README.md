@@ -69,7 +69,7 @@ The following features are implemented and verified in the current repository:
 
 ### User authentication
 
-The frontend uses Supabase Auth for email/password sign-in and sign-up. The backend validates bearer tokens against the Supabase Auth service at `/api/auth/me` and authorizes project, chapter, and chat actions by user.
+The frontend uses Supabase Auth for email/password sign-in, sign-up, and sign-out. Signing out uses Supabase's session-revocation flow, clears the frontend's cached user data and per-user selections, and returns to sign-in; a separate backend logout endpoint is unnecessary. The backend validates bearer tokens against the Supabase Auth service at `/api/auth/me` and authorizes project, chapter, and chat actions by user.
 
 ### Story project management
 
@@ -605,5 +605,4 @@ The broader relational, character graph, continuity lab, world-building, and AI 
 ## 📄 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
 
