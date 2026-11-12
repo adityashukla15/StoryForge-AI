@@ -13,13 +13,13 @@ A storytelling workspace built for long-form fiction writers who need persistent
 
 StoryForge AI helps authors organize story projects, upload chapters, index narrative content for semantic search, and ask grounded questions about their fictional universe without losing continuity across long writing arcs. The current implementation is the Release 1 MVP: a working core platform centered on project management, chapter ingestion, vector-based retrieval, and RAG-powered story chat with source citations.
 
-## Why StoryForge AI
+## 🚀 Why StoryForge AI
 
 StoryForge AI is designed around a simple but high-value idea: writers do not just need a chatbot — they need a memory system for their story world. Great fictional worlds accumulate dozens of chapters, character details, lore, timelines, and unresolved plot threads. Existing general-purpose AI tools often hallucinate missing facts or lack a persistent understanding of the writer's private universe.
 
 This project solves that by creating a project-scoped memory layer over a writer's uploaded chapters. It stores chapter text, chunks it into retrievable passages, embeds those passages, and retrieves the most relevant sections when the writer asks a question. Answers are generated using the retrieved story context, and source citations make the reference path clear.
 
-## Release status
+## 📌 Release Status
 
 This repository currently implements the Release 1 stack:
 
@@ -34,7 +34,7 @@ This repository currently implements the Release 1 stack:
 
 Release 2 features are planned in the roadmap and are not implemented in this codebase.
 
-## 1. Problem Statement
+## 🎯 Problem Statement
 
 Fiction writers and authors face a set of recurring problems that become much harder at scale:
 
@@ -47,7 +47,7 @@ Fiction writers and authors face a set of recurring problems that become much ha
 
 A specialized storytelling assistant is needed because the writer's world is personal, iterative, and often contains unstructured narrative knowledge spread across chapters. The solution has to be context-aware, persistent, and anchored to the author's own source material.
 
-## 2. Proposed Solution
+## 💡 Proposed Solution
 
 StoryForge AI addresses these problems with a project-based editorial workflow:
 
@@ -63,7 +63,7 @@ StoryForge AI addresses these problems with a project-based editorial workflow:
 
 This is a classic RAG pattern adapted for fiction writing: rather than asking a model to remember everything from memory, the app grounds answers in the writer's actual chapters and narrative content.
 
-## 3. Key Features — Release 1
+## ✨ Key Features — Release 1
 
 The following features are implemented and verified in the current repository:
 
@@ -119,7 +119,7 @@ Each project can have multiple conversations, and messages are stored with role 
 
 The retrieval system is scoped to a single project, preventing cross-project leakage and preserving user isolation.
 
-## 4. Application Workflow
+## 🧭 Application Workflow
 
 The user journey in StoryForge AI is intentionally simple:
 
@@ -139,7 +139,7 @@ The user journey in StoryForge AI is intentionally simple:
 
 This makes the assistant behave more like a story-aware research tool than a generic chatbot.
 
-## 5. System Architecture
+## 🏗️ System Architecture
 
 The repository implements a classic client-server architecture with a React frontend, a FastAPI backend, Supabase for identity and persistence, and Gemini for generative AI and embeddings.
 
@@ -179,7 +179,7 @@ flowchart LR
 - AI model: Gemini generates responses using retrieved context and reads the system instruction for grounded behavior
 - Embedding model: Gemini embedding model converts chapter chunks and questions into vectors
 
-## 6. Technology Stack
+## 🛠️ Technology Stack
 
 | Technology | Purpose | How it is used in StoryForge AI |
 | --- | --- | --- |
@@ -200,7 +200,7 @@ flowchart LR
 | `python-multipart` | File uploads | Enables chapter upload forms in FastAPI |
 | `pypdf` | PDF extraction | Extracts text from uploaded PDF chapters |
 
-## 7. RAG Architecture — Core Technical Innovation
+## 🧠 RAG Architecture — Core Technical Innovation
 
 StoryForge AI is a Retrieval-Augmented Generation application built specifically for story worlds.
 
@@ -247,7 +247,7 @@ flowchart TD
 
 This architecture is especially useful for long-form storytelling because it lets a writer ask, “What do we know about this character?,” “Which chapter mentions the city?” or “Was this event previously established?” and receive answers grounded in the writer's own chapters rather than generic model memory.
 
-## 8. Database Design
+## 🗄️ Database Design
 
 The implemented database schema is a project-owned relational model with row-level security and vector indexing.
 
@@ -337,7 +337,7 @@ erDiagram
     }
 ```
 
-## 9. Project Structure
+## 📂 Project Structure
 
 ```text
 StoryForge-AI/
@@ -424,7 +424,7 @@ StoryForge-AI/
 └── frontend/node_modules/
 ```
 
-## 10. API Documentation
+## 📚 API Documentation
 
 All backend routes are mounted under `/api`.
 
@@ -449,7 +449,7 @@ All backend routes are mounted under `/api`.
 | GET | `/api/conversations/{conversation_id}/messages` | Fetch messages in one conversation | Yes |
 | GET | `/api/dashboard/overview` | Return project and chat overview stats | Yes |
 
-## 11. Installation and Local Setup
+## ⚙️ Installation and Local Setup
 
 ### Prerequisites
 
@@ -504,7 +504,7 @@ These migrations enable the vector extension, create tables, enable row-level se
 ```bash
 cd ../frontend
 npm install
-cp .env.example .env
+cp .env.example .env.local
 ```
 
 ### 5. Start the backend
@@ -523,9 +523,27 @@ npm run dev
 
 The frontend expects the backend at `http://localhost:8000/api` by default, and the app uses Supabase Auth for session handling.
 
-## 12. Environment Variables
+## 🔐 Environment Variables
 
-The application expects the following environment values.
+StoryForge AI requires local environment files for runtime configuration and secrets. Keep these files private and never commit them to GitHub.
+
+- Frontend runtime config: `frontend/.env.local`
+- Backend runtime config: `backend/.env`
+- Example files are safe to commit: `.env.example`
+
+### Frontend (`frontend/.env.local`)
+
+```env
+VITE_API_BASE_URL=your_backend_api_url
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+How to configure it:
+
+- Create a Supabase project and copy the project URL and anonymous key.
+- Set `VITE_API_BASE_URL` to your local FastAPI backend URL during development, such as `http://localhost:8000/api`.
+- Keep this file local to your machine and do not commit it.
 
 ### Backend (`backend/.env`)
 
@@ -535,31 +553,44 @@ APP_ENV=development
 API_PREFIX=/api
 ALLOWED_ORIGINS=http://localhost:3000
 
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-GEMINI_API_KEY=your-gemini-api-key
+GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_DIMENSIONS=768
 ```
 
-### Frontend (`frontend/.env`)
+How to configure it:
 
-```env
-VITE_API_BASE_URL=http://localhost:8000/api
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
+- Create a Supabase project and copy the project URL and keys from the dashboard.
+- Generate or reuse a Gemini API key from Google AI Studio or Gemini API configuration.
+- Keep production values out of source control and use local environment files only.
 
 Important notes:
 
-- Do not commit real credentials or secrets.
+- `.env`, `.env.local`, and other environment files must never be committed to GitHub.
+- Use `.env.example` files as documentation templates, not as working credentials.
+- Project `.gitignore` rules should exclude environment files from version control.
 - The backend enforces production-only environment validation for Supabase URLs and CORS origin rules.
 - The app requires both a valid Supabase Auth session and a valid backend environment to function.
 
-## 13. Current Scope and Roadmap
+## 🔒 Security Notes
+
+StoryForge AI uses private credentials for Supabase authentication and Gemini API access. Treat these as production-sensitive values and never expose them in documentation, issue reports, screenshots, or public repositories.
+
+If any keys were ever committed to a public repository before this cleanup, rotate or revoke the affected credentials immediately, especially:
+
+- Supabase project URL and anon key
+- Supabase service-role key
+- Gemini API key
+- Any JWT or other auth tokens stored in local environment files
+
+If the repository was public at any time while secrets were present, Git history may also need review and cleanup by an authorized maintainer before redeploying.
+
+## 🔮 Current Scope and Roadmap
 
 This codebase implements the MVP and not the full future vision described in a broader storytelling platform roadmap. The current repository focuses on:
 
@@ -571,7 +602,7 @@ This codebase implements the MVP and not the full future vision described in a b
 
 The broader relational, character graph, continuity lab, world-building, and AI story intelligence features represented in the UI shell are not yet fully implemented as backend services or production-ready product capabilities.
 
-## 14. License
+## 📄 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
