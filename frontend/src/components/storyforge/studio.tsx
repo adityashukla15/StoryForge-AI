@@ -135,6 +135,7 @@ function StudioSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const trimmedQuery = query.trim().toLocaleLowerCase();
@@ -153,7 +154,7 @@ function StudioSearch() {
       )
     : [];
   const results = [
-    ...matchingProjects.map((project) => ({ id: `project-${project.id}`, href: "/dashboard", project })),
+    ...matchingProjects.map((project) => ({ id: `project-${project.id}`, href: "/editor", project })),
     ...matchingFeatures.map((feature) => ({ id: `feature-${feature.to}`, href: feature.to, feature })),
   ];
 
@@ -168,16 +169,38 @@ function StudioSearch() {
       return;
     }
 
+    function closeSearch() {
+      setOpen(false);
+      setQuery("");
+      setActiveIndex(-1);
+    }
+
+    function handleOutsideClick(event: PointerEvent) {
+      if (event.target instanceof Node && !searchContainerRef.current?.contains(event.target)) {
+        closeSearch();
+      }
+    }
+
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setOpen(false);
+        closeSearch();
         searchTriggerRef.current?.focus();
       }
     }
 
+    document.addEventListener("pointerdown", handleOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [open]);
+
+  function closeSearch() {
+    setOpen(false);
+    setQuery("");
+    setActiveIndex(-1);
+  }
 
   function openResult(index: number) {
     const result = results[index];
@@ -187,6 +210,7 @@ function StudioSearch() {
     if ("project" in result) {
       selectProject(result.project.id);
     }
+    closeSearch();
     window.location.assign(result.href);
   }
 
@@ -204,178 +228,165 @@ function StudioSearch() {
   }
 
   return (
-    <>
+    <div
+      ref={searchContainerRef}
+      className={`studio-search relative z-50 order-last h-11 w-11 shrink-0 lg:order-first ${open ? "studio-search-open" : ""}`}
+    >
+      <div
+        className={`absolute right-full top-0 flex h-11 overflow-hidden border-y border-l transition-[width,opacity,border-color] duration-300 ease-out ${
+          open
+            ? "pointer-events-auto w-[min(180px,calc(100vw-112px))] border-antique/35 bg-ink/95 opacity-100 backdrop-blur-xl sm:w-[210px] lg:w-[260px]"
+            : "pointer-events-none w-0 border-transparent opacity-0"
+        }`}
+      >
+        <input
+          ref={searchInputRef}
+          type="search"
+          role="combobox"
+          aria-label="Search projects and features"
+          aria-autocomplete="list"
+          aria-expanded={open && Boolean(trimmedQuery)}
+          aria-controls={open && trimmedQuery ? "studio-search-results" : undefined}
+          aria-activedescendant={activeIndex >= 0 ? `studio-search-result-${activeIndex}` : undefined}
+          aria-hidden={!open}
+          tabIndex={open ? 0 : -1}
+          placeholder="Search projects or features…"
+          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-foreground outline-none placeholder:text-foreground/40"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveIndex(-1);
+          }}
+          onKeyDown={handleSearchKeyDown}
+        />
+        {query && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            className="grid size-9 shrink-0 place-items-center text-foreground/55 transition-colors hover:text-antique"
+            onClick={() => {
+              setQuery("");
+              setActiveIndex(-1);
+              searchInputRef.current?.focus();
+            }}
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
       <Button
         ref={searchTriggerRef}
         aria-label="Search projects and features"
         title="Search projects and features"
+        aria-expanded={open}
+        aria-controls={open && trimmedQuery ? "studio-search-results" : undefined}
         variant="ghost"
         size="icon"
-        className="min-h-11 min-w-11 text-foreground/70 hover:text-antique"
-        onClick={() => setOpen(true)}
+        className={`relative z-10 min-h-11 min-w-11 text-foreground/70 hover:text-antique ${open ? "border border-antique/35 bg-ink/95 text-antique" : ""}`}
+        onClick={() => {
+          if (open) {
+            closeSearch();
+          } else {
+            setOpen(true);
+          }
+        }}
       >
         <Search />
       </Button>
-      {open && (
+      {open && trimmedQuery && (
         <div
-          className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/70 px-3 pb-6 pt-[max(5rem,12vh)] sm:px-6"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setOpen(false);
-            }
-          }}
+          id="studio-search-results"
+          role="listbox"
+          aria-label="Search results"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] max-h-[min(60vh,28rem)] w-[min(360px,calc(100vw-40px))] overflow-y-auto border border-antique/30 bg-ink/95 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl"
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="studio-search-title"
-            className="w-full max-w-2xl overflow-hidden border border-antique/30 bg-ink shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
-          >
-            <div className="flex items-center gap-3 border-b border-foreground/10 px-4 py-4 sm:px-5">
-              <Search size={18} className="shrink-0 text-antique" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <h2 id="studio-search-title" className="font-display text-xl text-foreground">Search your studio</h2>
-                <p className="text-xs text-foreground/50">Projects, writing tools, and StoryForge features</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Close search"
-                className="min-h-11 min-w-11 shrink-0 text-foreground/65"
-                onClick={() => setOpen(false)}
-              >
-                <X size={18} />
-              </Button>
-            </div>
-            <div className="flex min-w-0 items-center gap-3 border-b border-foreground/10 px-4 py-3 sm:px-5">
-              <input
-                ref={searchInputRef}
-                type="search"
-                role="combobox"
-                aria-label="Search projects and features"
-                aria-autocomplete="list"
-                aria-expanded={results.length > 0}
-                aria-controls={trimmedQuery ? "studio-search-results" : undefined}
-                aria-activedescendant={activeIndex >= 0 ? `studio-search-result-${activeIndex}` : undefined}
-                placeholder="Search projects, descriptions, genres, or features…"
-                className="min-w-0 flex-1 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-foreground/40"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActiveIndex(-1);
-                }}
-                onKeyDown={handleSearchKeyDown}
-              />
-              {query && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Clear search"
-                  className="min-h-11 min-w-11 shrink-0 text-foreground/60"
-                  onClick={() => {
-                    setQuery("");
-                    setActiveIndex(-1);
-                    searchInputRef.current?.focus();
+          <section role="group" aria-labelledby="studio-search-projects-heading">
+            <h3 id="studio-search-projects-heading" className="px-2 pb-1 pt-1 font-tech text-[9px] uppercase tracking-[0.16em] text-antique">
+              Projects
+            </h3>
+            {matchingProjects.map((project, index) => {
+              const active = index === activeIndex;
+              return (
+                <Link
+                  key={project.id}
+                  id={`studio-search-result-${index}`}
+                  to="/editor"
+                  role="option"
+                  aria-selected={active}
+                  onMouseMove={() => setActiveIndex(index)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openResult(index);
                   }}
+                  className={`mb-0.5 flex min-w-0 items-center gap-2.5 px-2 py-2 transition-colors ${
+                    active ? "bg-royal/60" : "hover:bg-royal/35"
+                  }`}
                 >
-                  <X size={16} />
-                </Button>
-              )}
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto px-4 py-4 sm:px-5">
-              {!trimmedQuery ? (
-                <p className="py-6 text-center text-sm text-foreground/55">
-                  Try a project title, description, genre, or feature like “assistant” or “world”.
-                </p>
-              ) : (
-                <div id="studio-search-results" role="listbox" aria-label="Search results">
-                  <section role="group" aria-labelledby="studio-search-projects-heading">
-                    <h3 id="studio-search-projects-heading" className="mb-2 font-tech text-[10px] uppercase tracking-[0.16em] text-antique">
-                      Projects
-                    </h3>
-                    {matchingProjects.map((project, index) => {
-                      const resultIndex = index;
-                      const active = resultIndex === activeIndex;
-                      return (
-                        <Link
-                          key={project.id}
-                          id={`studio-search-result-${resultIndex}`}
-                          to="/dashboard"
-                          role="option"
-                          aria-selected={active}
-                          onMouseMove={() => setActiveIndex(resultIndex)}
-                          onClick={() => selectProject(project.id)}
-                          className={`mb-1 flex min-w-0 items-start gap-3 border px-3 py-3 transition-colors ${active ? "border-antique/35 bg-royal/65" : "border-transparent hover:border-foreground/10 hover:bg-royal/35"}`}
-                        >
-                          <BookOpen size={16} className="mt-0.5 shrink-0 text-antique" aria-hidden="true" />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-foreground">{project.title}</span>
-                            <span className="mt-1 block line-clamp-2 break-words text-xs leading-5 text-foreground/55">
-                              {project.description?.trim() || (project.genre ? `${project.genre} story project` : "Story project")}
-                            </span>
-                            {project.genre && project.description?.trim() && (
-                              <span className="mt-1 block text-[10px] text-lavender">{project.genre}</span>
-                            )}
-                          </span>
-                          <ArrowRight size={14} className="mt-1 shrink-0 text-foreground/35" aria-hidden="true" />
-                        </Link>
-                      );
-                    })}
-                    {projectsLoading && <p className="py-3 text-xs text-foreground/55" role="status">Loading your projects…</p>}
-                    {!projectsLoading && !projectsError && matchingProjects.length === 0 && (
-                      <p className="py-3 text-xs text-foreground/50">No projects found.</p>
-                    )}
-                    {projectsError && (
-                      <div className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs" role="alert">
-                        <span className="text-destructive">Projects could not be loaded: {projectsError.message}</span>
-                        <Button variant="outline" className="h-8 px-3 text-xs" onClick={retryProjects}>Try again</Button>
-                      </div>
-                    )}
-                  </section>
-                  <section className="mt-5 border-t border-foreground/10 pt-4" role="group" aria-labelledby="studio-search-features-heading">
-                    <h3 id="studio-search-features-heading" className="mb-2 font-tech text-[10px] uppercase tracking-[0.16em] text-antique">
-                      AI Features
-                    </h3>
-                    {matchingFeatures.map((feature, index) => {
-                      const resultIndex = matchingProjects.length + index;
-                      const active = resultIndex === activeIndex;
-                      const Icon = feature.icon;
-                      return (
-                        <Link
-                          key={feature.to}
-                          id={`studio-search-result-${resultIndex}`}
-                          to={feature.to}
-                          role="option"
-                          aria-selected={active}
-                          onMouseMove={() => setActiveIndex(resultIndex)}
-                          className={`mb-1 flex min-w-0 items-start gap-3 border px-3 py-3 transition-colors ${active ? "border-antique/35 bg-royal/65" : "border-transparent hover:border-foreground/10 hover:bg-royal/35"}`}
-                        >
-                          <Icon size={16} className="mt-0.5 shrink-0 text-lavender" aria-hidden="true" />
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
-                              {feature.title}
-                              <span className={`font-tech text-[9px] uppercase tracking-[0.1em] ${feature.status === "Preview" ? "text-antique" : "text-lavender"}`}>
-                                {feature.status}
-                              </span>
-                            </span>
-                            <span className="mt-1 block break-words text-xs leading-5 text-foreground/55">{feature.description}</span>
-                          </span>
-                          <ArrowRight size={14} className="mt-1 shrink-0 text-foreground/35" aria-hidden="true" />
-                        </Link>
-                      );
-                    })}
-                    {matchingFeatures.length === 0 && <p className="py-3 text-xs text-foreground/50">No matching features found.</p>}
-                  </section>
-                </div>
-              )}
-            </div>
-            <div className="border-t border-foreground/10 px-4 py-2 text-[10px] text-foreground/40 sm:px-5">
-              Use ↑ and ↓ to navigate, Enter to open, or Esc to close.
-            </div>
+                  <BookOpen size={15} className="shrink-0 text-antique" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium text-foreground">{project.title}</span>
+                    <span className="mt-0.5 block truncate text-[10px] text-foreground/50">
+                      {project.description?.trim() || (project.genre ? `${project.genre} story project` : "Story project")}
+                    </span>
+                  </span>
+                  <ArrowRight size={13} className="shrink-0 text-foreground/35" aria-hidden="true" />
+                </Link>
+              );
+            })}
+            {projectsLoading && <p className="px-2 py-2 text-[11px] text-foreground/55" role="status">Loading your projects…</p>}
+            {!projectsLoading && !projectsError && matchingProjects.length === 0 && (
+              <p className="px-2 py-2 text-[11px] text-foreground/50">No projects found.</p>
+            )}
+            {projectsError && (
+              <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-[11px]" role="alert">
+                <span className="text-destructive">Projects could not be loaded: {projectsError.message}</span>
+                <Button variant="outline" className="h-7 px-2 text-[10px]" onClick={retryProjects}>Retry</Button>
+              </div>
+            )}
+          </section>
+          <section className="mt-1 border-t border-foreground/10 pt-1" role="group" aria-labelledby="studio-search-features-heading">
+            <h3 id="studio-search-features-heading" className="px-2 pb-1 pt-1 font-tech text-[9px] uppercase tracking-[0.16em] text-antique">
+              AI Features
+            </h3>
+            {matchingFeatures.map((feature, index) => {
+              const resultIndex = matchingProjects.length + index;
+              const active = resultIndex === activeIndex;
+              const Icon = feature.icon;
+              return (
+                <Link
+                  key={feature.to}
+                  id={`studio-search-result-${resultIndex}`}
+                  to={feature.to}
+                  role="option"
+                  aria-selected={active}
+                  onMouseMove={() => setActiveIndex(resultIndex)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openResult(resultIndex);
+                  }}
+                  className={`mb-0.5 flex min-w-0 items-center gap-2.5 px-2 py-2 transition-colors ${
+                    active ? "bg-royal/60" : "hover:bg-royal/35"
+                  }`}
+                >
+                  <Icon size={15} className="shrink-0 text-lavender" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-foreground">
+                      {feature.title}
+                      <span className={`font-tech text-[8px] uppercase tracking-[0.1em] ${feature.status === "Preview" ? "text-antique" : "text-lavender"}`}>
+                        {feature.status}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block truncate text-[10px] text-foreground/50">{feature.description}</span>
+                  </span>
+                  <ArrowRight size={13} className="shrink-0 text-foreground/35" aria-hidden="true" />
+                </Link>
+              );
+            })}
+            {matchingFeatures.length === 0 && <p className="px-2 py-2 text-[11px] text-foreground/50">No matching features found.</p>}
           </section>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
