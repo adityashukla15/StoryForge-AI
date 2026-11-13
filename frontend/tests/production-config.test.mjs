@@ -58,6 +58,7 @@ test('Vercel rewrites each supported route without rewriting API or assets', asy
     '/editor',
     '/assistant',
     '/relationships',
+    '/qna',
   ];
 
   assert.deepEqual(

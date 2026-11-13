@@ -10,6 +10,7 @@
     { "source": "/continuity", "destination": "/index.html" },
     { "source": "/editor", "destination": "/index.html" },
     { "source": "/assistant", "destination": "/index.html" },
-    { "source": "/relationships", "destination": "/index.html" }
+    { "source": "/relationships", "destination": "/index.html" },
+    { "source": "/qna", "destination": "/index.html" }
   ]
 }
