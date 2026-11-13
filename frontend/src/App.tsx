@@ -23,6 +23,7 @@ const routeViews: Record<string, StudioView> = {
   "/editor": "editor",
   "/assistant": "assistant",
   "/relationships": "relationships",
+  "/qna": "qna",
 };
 
 function readStoredValue(key: string): unknown {

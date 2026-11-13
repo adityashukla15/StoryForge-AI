@@ -23,6 +23,7 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  Minus,
   Plus,
   Search,
   Send,
@@ -41,6 +42,7 @@ import { StoryAssistant as ConnectedStoryAssistant } from "../StoryAssistant";
 import { useDashboard } from "../../hooks/useStoryforge";
 import { ProjectEditor } from "../ProjectEditor";
 import { useStudioContext } from "./StudioContext";
+import { faqCategories, faqItems, type FaqCategory } from "./faqData";
 import type { Project } from "../../types/api";
 
 function Link({ to, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) {
@@ -390,7 +392,7 @@ function StudioSearch() {
   );
 }
 
-export type StudioView = "dashboard" | "characters" | "world" | "memory" | "continuity" | "editor" | "assistant" | "relationships";
+export type StudioView = "dashboard" | "characters" | "world" | "memory" | "continuity" | "editor" | "assistant" | "relationships" | "qna";
 type View = StudioView;
 
 const pageCopy: Record<View, { title: string; subtitle: string; crumb: string; icon: typeof BookOpen }> = {
@@ -402,6 +404,7 @@ const pageCopy: Record<View, { title: string; subtitle: string; crumb: string; i
   editor: { title: "A quiet place to find the words.", subtitle: "Your next chapter is already waiting.", crumb: "Chapter editor", icon: BookText },
   assistant: { title: "A second mind for your first idea.", subtitle: "Think it through, one thought at a time.", crumb: "Story AI assistant", icon: MessageCircle },
   relationships: { title: "Every connection tells a story.", subtitle: "Follow the ties that hold your world together.", crumb: "Relationship map", icon: GitBranch },
+  qna: { title: "How can we help you?", subtitle: "Find answers to common questions about StoryForge AI.", crumb: "Help center", icon: CircleHelp },
 };
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -563,7 +566,7 @@ function StudioLayout({ view, children }: { view: View; children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="studio-topbar sticky top-0 z-40 flex min-h-[68px] items-center justify-between gap-3 border-b border-foreground/10 bg-ink/90 px-4 py-2 backdrop-blur-xl md:px-7">
         <div className="studio-header-left flex min-w-0 items-center gap-3 md:gap-5"><Brand /><span className="hidden h-5 w-px bg-foreground/15 sm:block" /><label className="flex min-w-0 items-center gap-2 text-xs text-foreground/55"><BookOpen size={13} className="shrink-0 text-antique" /><select aria-label="Select project" disabled={projectsLoading || Boolean(projectsError)} className="max-w-[145px] truncate bg-transparent text-foreground/75 outline-none sm:max-w-[220px]" value={selectedProjectId ?? ""} onChange={(event) => selectProject(event.target.value || null)}><option value="" className="bg-ink">{projectsLoading ? "Loading projects…" : projectsError ? "Project list unavailable" : projects.length ? "Choose project" : "No projects yet"}</option>{projects.map((project) => <option className="bg-ink" key={project.id} value={project.id}>{project.title}</option>)}</select><ChevronDown size={12} /></label></div>
-        <div className="studio-header-actions flex flex-wrap shrink-0 items-center gap-2 sm:flex-nowrap md:gap-3"><StudioSearch /><Button aria-label="Help is not available yet" title="Help is not available yet" disabled variant="ghost" size="icon" className="hidden text-foreground/70 hover:text-antique md:inline-flex"><CircleHelp /></Button><span className="hidden h-6 w-px bg-foreground/15 md:block" /><Button variant="outline" className="h-9 border-antique/35 bg-transparent px-3 text-xs text-foreground hover:bg-royal/50 hover:text-foreground" onClick={openCreateProject}><Plus size={14} /> New story</Button><div className="profile-menu-container" ref={profileMenuRef}>
+        <div className="studio-header-actions flex flex-wrap shrink-0 items-center gap-2 sm:flex-nowrap md:gap-3"><StudioSearch /><Link to="/qna" aria-label="Help and Q&A" title="Help and Q&A" className="inline-flex min-h-11 min-w-11 items-center justify-center bg-transparent text-foreground/70 transition-colors hover:bg-royal/45 hover:text-antique md:size-9"><CircleHelp /></Link><span className="hidden h-6 w-px bg-foreground/15 md:block" /><Button variant="outline" className="h-9 border-antique/35 bg-transparent px-3 text-xs text-foreground hover:bg-royal/50 hover:text-foreground" onClick={openCreateProject}><Plus size={14} /> New story</Button><div className="profile-menu-container" ref={profileMenuRef}>
             <button
               ref={profileButtonRef}
               type="button"
@@ -607,7 +610,7 @@ function StudioLayout({ view, children }: { view: View; children: ReactNode }) {
         <main className="min-w-0 flex-1">
           <div className="border-b border-foreground/10 px-5 pt-6 md:px-9 md:pt-8">
             <div className="flex items-center gap-2 text-[10px] text-foreground/40"><Link to="/dashboard" className="hover:text-antique">{selectedProject?.title ?? "Your library"}</Link><ChevronRight size={11} /><span className="text-antique">{current.crumb}</span></div>
-            <div className="mt-5 flex items-end justify-between gap-4 pb-5"><div className="min-w-0"><p className="flex flex-wrap items-center gap-2 font-tech text-[9px] uppercase tracking-[0.19em] text-antique"><current.icon size={13} /> StoryForge AI <span className="text-foreground/25">/</span> {current.crumb}</p><h1 className="mt-2 max-w-[820px] font-display text-3xl leading-tight text-foreground md:text-4xl">{current.title}</h1><p className="mt-2 text-sm text-foreground/55">{current.subtitle}</p></div><Button variant="ghost" size="icon" aria-label="Toggle navigation" className="min-h-11 min-w-11 shrink-0 text-foreground/65 lg:hidden" onClick={() => setMobileNavOpen(!mobileNavOpen)}>{mobileNavOpen ? <X /> : <Menu />}</Button></div>
+            <div className="mt-5 flex items-end justify-between gap-4 pb-5"><div className={`min-w-0 ${view === "qna" ? "help-center-heading" : ""}`}><p className="flex flex-wrap items-center gap-2 font-tech text-[9px] uppercase tracking-[0.19em] text-antique"><current.icon size={13} /> StoryForge AI <span className="text-foreground/25">/</span> {current.crumb}</p><h1 className="mt-2 max-w-[820px] font-display text-3xl leading-tight text-foreground md:text-4xl">{current.title}</h1><p className="mt-2 text-sm text-foreground/55">{current.subtitle}</p></div><Button variant="ghost" size="icon" aria-label="Toggle navigation" className="min-h-11 min-w-11 shrink-0 text-foreground/65 lg:hidden" onClick={() => setMobileNavOpen(!mobileNavOpen)}>{mobileNavOpen ? <X /> : <Menu />}</Button></div>
             {mobileNavOpen && <nav className="studio-mobile-nav -mx-5 flex gap-1 overflow-x-auto border-t border-foreground/10 px-4 py-2 lg:hidden">{navItems.map(({ to, label, icon: Icon }) => { const active = to === `/${view}`; return <Link key={to} to={to} data-status={active ? "active" : "inactive"} aria-current={active ? "page" : undefined} onClick={() => setMobileNavOpen(false)} className="flex shrink-0 items-center gap-2 px-3 py-2 text-[11px] text-foreground/65 hover:bg-royal/50 hover:text-foreground"><Icon size={14} />{label}</Link>; })}</nav>}
           </div>
           <div className="px-5 py-6 md:px-9 md:py-8">
@@ -773,6 +776,155 @@ function RelationshipMap() {
   </StudioLayout>;
 }
 
+function HelpCenter() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<FaqCategory | "All topics">("All topics");
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(() => new Set());
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleFaqs = faqItems.filter((faq) => {
+    const matchesCategory = category === "All topics" || faq.category === category;
+    const matchesQuery = !normalizedQuery
+      || `${faq.question} ${faq.answer} ${faq.category}`.toLocaleLowerCase().includes(normalizedQuery);
+    return matchesCategory && matchesQuery;
+  });
+
+  function toggleQuestion(id: string) {
+    setExpandedQuestions((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function clearSearch() {
+    setQuery("");
+    setCategory("All topics");
+  }
+
+  return (
+    <StudioLayout view="qna">
+      <div className="help-center-content mx-auto max-w-4xl">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-antique/75" aria-hidden="true" />
+            <input
+              type="search"
+              aria-label="Search questions"
+              placeholder="Search questions..."
+              className="h-11 w-full border border-foreground/15 bg-ink/60 pl-10 pr-10 text-sm text-foreground placeholder:text-foreground/40 focus:border-antique/50 focus:outline-none focus:ring-2 focus:ring-lavender/30"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-1 top-1 grid size-9 place-items-center text-foreground/50 transition-colors hover:text-antique"
+                onClick={() => setQuery("")}
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          <Link
+            to="/dashboard"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start border border-antique/25 px-3 text-xs text-antique transition-colors hover:bg-royal/45 sm:self-auto"
+          >
+            <ArrowLeft size={14} aria-hidden="true" />
+            Back to dashboard
+          </Link>
+        </div>
+
+        <nav className="mb-5 flex gap-2 overflow-x-auto pb-2" aria-label="FAQ categories">
+          {(["All topics", ...faqCategories] as const).map((item) => {
+            const selected = category === item;
+            const count = item === "All topics"
+              ? faqItems.length
+              : faqItems.filter((faq) => faq.category === item).length;
+            return (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setCategory(item)}
+                className={`inline-flex min-h-9 shrink-0 items-center gap-2 border px-3 text-[11px] transition-colors ${
+                  selected
+                    ? "border-antique/45 bg-royal/55 text-antique"
+                    : "border-foreground/10 bg-ink/30 text-foreground/60 hover:border-antique/25 hover:text-foreground"
+                }`}
+              >
+                {item}
+                <span className="font-tech text-[9px] opacity-60">{count}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mb-3 flex items-center justify-between gap-3 text-[10px] text-foreground/45" aria-live="polite">
+          <span>{visibleFaqs.length} {visibleFaqs.length === 1 ? "answer" : "answers"}</span>
+          {(query || category !== "All topics") && (
+            <button type="button" className="text-antique transition-colors hover:text-lavender" onClick={clearSearch}>
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {visibleFaqs.length ? (
+          <div className="space-y-2">
+            {visibleFaqs.map((faq) => {
+              const expanded = expandedQuestions.has(faq.id);
+              const answerId = `faq-answer-${faq.id}`;
+              return (
+                <article key={faq.id} className="border border-foreground/10 bg-ink/35 transition-colors hover:border-antique/25">
+                  <h2>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={answerId}
+                      onClick={() => toggleQuestion(faq.id)}
+                      className="flex min-h-[58px] w-full items-center gap-3 px-4 py-3 text-left sm:px-5"
+                    >
+                      <span className={`grid size-7 shrink-0 place-items-center border transition-colors ${expanded ? "border-antique/35 bg-antique/10 text-antique" : "border-foreground/10 text-foreground/45"}`}>
+                        {expanded ? <Minus size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm leading-5 text-foreground/90">{faq.question}</span>
+                      <span className="hidden shrink-0 font-tech text-[8px] uppercase tracking-[0.12em] text-foreground/35 sm:block">{faq.category}</span>
+                    </button>
+                  </h2>
+                  <div
+                    id={answerId}
+                    className={`faq-answer-grid ${expanded ? "faq-answer-expanded" : ""}`}
+                    aria-hidden={!expanded}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="border-t border-foreground/10 px-4 py-4 pl-14 text-xs leading-6 text-foreground/60 sm:px-5 sm:pl-[4.25rem]">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="border border-foreground/10 bg-ink/35 px-5 py-10 text-center" role="status">
+            <CircleHelp size={22} className="mx-auto text-antique/70" aria-hidden="true" />
+            <h2 className="mt-3 font-display text-xl text-foreground">No questions found</h2>
+            <p className="mt-1 text-xs text-foreground/50">Try another search or clear the selected filters.</p>
+            <button type="button" className="mt-4 text-xs text-antique transition-colors hover:text-lavender" onClick={clearSearch}>
+              Clear search and filters
+            </button>
+          </div>
+        )}
+      </div>
+    </StudioLayout>
+  );
+}
+
 export function StudioPage({ view }: { view: StudioView }) {
   switch (view) {
     case "dashboard": return <Dashboard />;
@@ -783,5 +935,6 @@ export function StudioPage({ view }: { view: StudioView }) {
     case "editor": return <ChapterEditor />;
     case "assistant": return <StoryAssistant />;
     case "relationships": return <RelationshipMap />;
+    case "qna": return <HelpCenter />;
   }
 }
